@@ -1,0 +1,27 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: pecb10_check
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: local_check_only
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pecb10_check"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  check:
+    image: logistic-call-auditor-bot
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:local_check_only@db:5432/pecb10_check
+    volumes:
+      - ./container_check.py:/app/container_check.py:ro
+    command: ["python", "container_check.py"]
+networks:
+  default:
+    internal: true
